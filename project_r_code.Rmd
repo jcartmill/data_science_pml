@@ -1,0 +1,47 @@
+---
+title: "Pml Class Project"
+author: "John Cartmill"
+date: "Sunday, August 24, 2014"
+output: html_document
+---
+```{r}
+#Load caret library
+library(caret)
+# set the seed for reproducibility
+set.seed(821)
+setwd("C:\\Users\\John\\Documents")
+#Read in all of the data
+pml_all<-read.table("R\\data\\pml-training.csv",sep=",",header=TRUE)
+# Eliminate columns that have all NA's
+pml_no_na<-pml_all[,colSums(is.na(pml_all))==0]
+#Eliminate any non numeric columns
+pml_no_factors<-pml_no_na[,!sapply(pml_no_na[,1:ncol(pml_no_na)-1],is.factor)]
+
+#Parttion the data 75% for training 25% for cross validation
+inTrain<-createDataPartition(pml_no_factors$classe,p=0.75)[[1]]
+pmlTrain=pml_no_factors[inTrain,]
+pmlTest=pml_no_factors[-inTrain,]
+
+#Use Principal Component Analysis
+pp<-preProcess(pmlTrain[,1:ncol(pmlTrain)-1],method="pca")
+pp
+#Fit to the training data
+trainPC <- predict(pp,pmlTrain[,1:ncol(pmlTrain)-1])
+modelFit <- train(pmlTrain$classe ~ .,method="knn",data=trainPC)
+
+#Use the cross validation data
+testPC <- predict(pp,pmlTest[,1:ncol(pmlTest)-1])
+confusionMatrix(pmlTest$classe,predict(modelFit,testPC))
+
+#Use the test data for submission
+pml_cl<-read.csv("R/data/pml-testing.csv",)
+
+#Apply the same preprocessing as to the training data set
+pcl_no_na<-pml_cl[,colSums(is.na(pml_cl))==0]
+pclTest<-pcl_no_na[,!sapply(pcl_no_na[,1:ncol(pcl_no_na)-1],is.factor)]
+#Get the predictions
+pclTest<-pcl_no_na[,!sapply(pcl_no_na[,1:ncol(pcl_no_na)],is.factor)]
+testPCL<-predict(pp,pclTest[,1:ncol(pclTest)-1])
+ans <-predict(modelFit,testPCL)
+print(ans)
+```
